@@ -1,4 +1,4 @@
-use rand::Rng;
+use rand::{Rng, rngs::ThreadRng};
 use num_bigint::{BigInt, ToBigInt};
 
 fn calc_s_d(n: i32) -> (i32, i32) {
@@ -32,34 +32,58 @@ fn calc_s_d(n: i32) -> (i32, i32) {
 //     String::from("probably prime")
 // }
 
-fn miller_rabin(n: i32, k: i32) -> String {
-    if n % 2 == 0 || n < 3 { return String::from("composite") }
+// fn miller_rabin(n: i32, k: i32) -> String {
+//     if n % 2 == 0 || n < 3 { return String::from("composite") }
     
+    // let mut rng = rand::thread_rng();
+//     let (s, d) = calc_s_d(n);
+//     // if (n-1) != ((2^s)*d) { panic!("s and d values invalid"); }
+//     for _ in 1..k {
+//         let a = rng.gen_range(1..n-1); // generate a random number between 2 and n - 2
+//         let mut x: BigInt = BigInt::from(a).modpow(&d.to_bigint().unwrap(), &n.to_bigint().unwrap());
+//         let mut y: BigInt = BigInt::from(0);  // nontrivial square root of 1 modulo n
+//         for _ in 1..s {
+//             y = x.modpow(&2.to_bigint().unwrap(), &n.to_bigint().unwrap());
+//             if y == BigInt::from(1) && x != BigInt::from(1) && x != (n.to_bigint().unwrap() - BigInt::from(1)) {
+//                 return String::from("composite")
+//             }
+//             x = y.clone();
+//         }
+//         if y != BigInt::from(1) {
+//             return String::from("composite")
+//         }
+//     };
+//     String::from("probably prime")
+// }
+
+fn miller(n: i32, d: i32) -> Option<bool> {
     let mut rng = rand::thread_rng();
-    let (s, d) = calc_s_d(n);
-    // if (n-1) != ((2^s)*d) { panic!("s and d values invalid"); }
-    for _ in 1..k {
-        let a = rng.gen_range(1..n-1); // generate a random number between 2 and n - 2
-        let mut x: BigInt = BigInt::from(a).modpow(&d.to_bigint().unwrap(), &n.to_bigint().unwrap());
-        let mut y: BigInt = BigInt::from(0);  // nontrivial square root of 1 modulo n
-        for _ in 1..s {
-            y = x.modpow(&2.to_bigint().unwrap(), &n.to_bigint().unwrap());
-            if y == BigInt::from(1) && x != BigInt::from(1) && x != (n.to_bigint().unwrap() - BigInt::from(1)) {
-                return String::from("composite")
-            }
-            x = y.clone();
-        }
-        if y != BigInt::from(1) {
-            return String::from("composite")
-        }
-    };
-    String::from("probably prime")
+    let a = rng.gen_range(2..n-2);
+    let mut x: BigInt = BigInt::from(a).modpow(&d.to_bigint().unwrap(), &n.to_bigint().unwrap());
+    if x.eq(&BigInt::from(1)) || x.eq(&BigInt::from(n-1)) { return Some(true) }
+    while d != n - 1 {
+        x = x.modpow(&BigInt::from(2), &n.to_bigint().unwrap());
+        if x.eq(&BigInt::from(1)) { return Some(true) }
+        else if x.eq(&BigInt::from(n - 1)) { return Some(false) }
+    }
+    None
+}
+
+fn miller_rabin(n: i32, k: i32) -> bool {
+    if n < 3 || n % 2 == 0 { return false }
+    let (_, d) = calc_s_d(n);
+
+    for _ in 0..k {
+        if !(miller(n, d).unwrap()) { return false }
+    }
+    true
+
 }
 
 #[warn(non_snake_case)]
 fn main() {
-    let n = 53;
-    let k = 10;
+    let n = 13;
+    let k = 2;
     let (a, b) = calc_s_d(n);
     println!("s: {} d: {}", a, b);
     let prim = miller_rabin(n, k);
